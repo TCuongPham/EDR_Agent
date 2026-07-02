@@ -1,0 +1,60 @@
+{
+  "events": [
+    {
+      "timestamp": 1719712800000000,
+      "eventType": "ProcessCreate",
+      "pid": 1000,
+      "ppid": 4,
+      "processName": "explorer.exe",
+      "commandLine": "C:\\Windows\\explorer.exe",
+      "imagePath": "C:\\Windows\\explorer.exe"
+    },
+    {
+      "timestamp": 1719712801000000,
+      "eventType": "ProcessCreate",
+      "pid": 800,
+      "ppid": 1000,
+      "processName": "lsass.exe",
+      "commandLine": "C:\\Windows\\System32\\lsass.exe",
+      "imagePath": "C:\\Windows\\System32\\lsass.exe"
+    },
+    {
+      "timestamp": 1719712802000000,
+      "eventType": "ProcessCreate",
+      "pid": 2000,
+      "ppid": 1000,
+      "processName": "cmd.exe",
+      "commandLine": "C:\\Windows\\System32\\cmd.exe",
+      "imagePath": "C:\\Windows\\System32\\cmd.exe"
+    },
+    {
+      "timestamp": 1719712805000000,
+      "eventType": "ProcessAccess",
+      "pid": 2000,
+      "targetPid": 800,
+      "accessRights": 5136,
+      "processName": "cmd.exe",
+      "commandLine": "C:\\Windows\\System32\\cmd.exe",
+      "imagePath": "C:\\Windows\\System32\\cmd.exe"
+    },
+    {
+      "timestamp": 1719712806000000,
+      "eventType": "ProcessCreate",
+      "pid": 3000,
+      "ppid": 2000,
+      "processName": "powershell.exe",
+      "commandLine": "powershell.exe -ExecutionPolicy Bypass -NoProfile -enc d3JpdGUtZGVidWcgJ3Rlc3Qn",
+      "imagePath": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+    },
+    {
+      "timestamp": 1719712810000000,
+      "eventType": "RegistrySet",
+      "pid": 3000,
+      "processName": "powershell.exe",
+      "commandLine": "powershell.exe",
+      "imagePath": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "regKeyPath": "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "regValue": "Backdoor"
+    }
+  ]
+}

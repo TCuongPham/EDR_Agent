@@ -1,0 +1,43 @@
+{
+  "agent_id": "edr-agent-001",
+  "agent_version": "1.0.0",
+  "model_path": "models/edr_model.onnx",
+  "features_config_path": "configs/features_config.json",
+  "scaler_params_path": "configs/scaler_params.json",
+  "response_policy_path": "configs/response_policy.json",
+  "collectors": {
+    "process": {
+      "enabled": true,
+      "provider_guid": "22fb2cd6-0e7b-422b-a0c7-2fad1fd0e716",
+      "keywords": "0x10",
+      "comment": "Microsoft-Windows-Kernel-Process — Event 1 (ProcessStart), Event 2 (ProcessStop), Event 5 (ImageLoad)"
+    },
+    "process_access": {
+      "enabled": true,
+      "provider_guid": "22fb2cd6-0e7b-422b-a0c7-2fad1fd0e716",
+      "keywords": "0x20",
+      "comment": "Microsoft-Windows-Kernel-Process — Event 13 (OpenProcessHandle), Event 14 (DuplicateProcessHandle)"
+    },
+    "file": {
+      "enabled": false,
+      "provider_guid": "edd08927-9cc4-4e65-b970-c2560fb5c289",
+      "keywords": "0x10",
+      "comment": "Microsoft-Windows-Kernel-File — Event 64 (FileCreate), Event 69 (FileDelete)"
+    },
+    "network": {
+      "enabled": false,
+      "provider_guid": "7dd42a49-5329-4832-8dfd-43d979153a88",
+      "keywords": "0x40",
+      "comment": "Microsoft-Windows-Kernel-Network — Event 10 (TcpIp/Connect)"
+    },
+    "registry": {
+      "enabled": true,
+      "provider_guid": "70eb4f03-c1de-4f73-a051-33d13d5413bd",
+      "keywords": "0x1",
+      "comment": "Microsoft-Windows-Kernel-Registry — Event 1 (CreateKey), Event 5 (SetValueKey)"
+    }
+  },
+  "sliding_window_seconds": [5, 30, 300],
+  "ring_buffer_size": 65536,
+  "log_level": "INFO"
+}

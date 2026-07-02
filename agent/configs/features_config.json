@@ -1,0 +1,26 @@
+{
+  "model_name": "edr_lgbm_malware_credential_v2",
+  "feature_count": 19,
+  "classes": { "0": "Benign", "1": "Malware Behavior", "2": "Credential Access" },
+  "features": [
+    {"index": 0,  "name": "child_spawn_count_30s",       "type": "count",  "default": 0.0,  "namespace": "process"},
+    {"index": 1,  "name": "cmdline_length",              "type": "int",    "default": 0.0,  "namespace": "process"},
+    {"index": 2,  "name": "cmdline_entropy",             "type": "float",  "default": 0.0,  "namespace": "process"},
+    {"index": 3,  "name": "has_encoded_cmdline",         "type": "binary", "default": 0.0,  "namespace": "process"},
+    {"index": 4,  "name": "has_download_cradle",         "type": "binary", "default": 0.0,  "namespace": "process"},
+    {"index": 5,  "name": "cmdline_suspicious_kw_count", "type": "count",  "default": 0.0,  "namespace": "process"},
+    {"index": 6,  "name": "is_lolbin",                   "type": "binary", "default": 0.0,  "namespace": "process"},
+    {"index": 7,  "name": "parent_is_lolbin",            "type": "binary", "default": 0.0,  "namespace": "process"},
+    {"index": 8,  "name": "token_elevated",              "type": "binary", "default": 0.0,  "namespace": "process"},
+    {"index": 9,  "name": "process_depth_in_tree",       "type": "ordinal","default": 0.0,  "namespace": "process"},
+    {"index": 10, "name": "parent_is_script_engine",     "type": "binary", "default": 0.0,  "namespace": "process"},
+    {"index": 11, "name": "is_in_temp_path",             "type": "binary", "default": 0.0,  "namespace": "process"},
+    {"index": 12, "name": "is_in_system_path",           "type": "binary", "default": 0.0,  "namespace": "process"},
+    {"index": 13, "name": "lifetime_ms_log",             "type": "float",  "default": -1.0, "namespace": "process"},
+    {"index": 14, "name": "unusual_parent_child",        "type": "float",  "default": 0.0,  "namespace": "process"},
+    {"index": 15, "name": "tree_fan_out_max",            "type": "count",  "default": 0.0,  "namespace": "process"},
+    {"index": 16, "name": "lsass_access",                "type": "binary", "default": 0.0,  "namespace": "memory"},
+    {"index": 17, "name": "access_rights_vm_read",       "type": "binary", "default": 0.0,  "namespace": "memory"},
+    {"index": 18, "name": "reg_sam_security_access",     "type": "binary", "default": 0.0,  "namespace": "registry"}
+  ]
+}

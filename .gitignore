@@ -1,0 +1,142 @@
+# ==============================================================
+# EDR AI Agent — .gitignore
+# ==============================================================
+
+# ---------------------------------------------------------------
+# CMake / Build artifacts
+# ---------------------------------------------------------------
+build/
+Build/
+bin/
+out/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+
+# ---------------------------------------------------------------
+# Visual Studio / MSVC
+# ---------------------------------------------------------------
+.vs/
+*.user
+*.suo
+*.opendb
+*.VC.db
+*.VC.opendb
+*.vcxproj.user
+*.ncb
+*.sdf
+*.opensdf
+ipch/
+*.aps
+
+# ---------------------------------------------------------------
+# Compiled object files & binaries
+# ---------------------------------------------------------------
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.lib
+*.dll
+*.exp
+*.map
+*.iobj
+*.ipdb
+
+# ---------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+*.egg
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+mlruns/
+
+# ---------------------------------------------------------------
+# Jupyter Notebook
+# ---------------------------------------------------------------
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ---------------------------------------------------------------
+# ML Models & Large Binary Files
+# ---------------------------------------------------------------
+# Uncommment nếu muốn track model files qua Git LFS thay vì commit trực tiếp
+# ml/data/models/*.pkl
+# ml/data/models/*.onnx
+# ml/data/models_v2/*.pkl
+# ml/data/models_v2/*.onnx
+ml/data/raw/
+ml/data/eda/
+
+# ---------------------------------------------------------------
+# SQLite Databases (runtime generated)
+# ---------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+telemetry_events.db
+telemetry_events.json
+
+# ---------------------------------------------------------------
+# Archives & Zips
+# ---------------------------------------------------------------
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# ---------------------------------------------------------------
+# Logs & Temporary files
+# ---------------------------------------------------------------
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+
+# ---------------------------------------------------------------
+# OS generated
+# ---------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ---------------------------------------------------------------
+# ETW / ETL trace files (runtime generated)
+# ---------------------------------------------------------------
+*.etl
+*.etlx
+
+# ---------------------------------------------------------------
+# Third-party prebuilt binaries (nếu không track)
+# ---------------------------------------------------------------
+# agent/third_party/onnxruntime/
+# agent/third_party/sqlite/
+
+# ---------------------------------------------------------------
+# IDE / Editor
+# ---------------------------------------------------------------
+.idea/
+*.iml
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+# Giữ lại .vscode/extensions.json nếu cần chia sẻ extensions

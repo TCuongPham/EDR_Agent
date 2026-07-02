@@ -1,0 +1,34 @@
+{
+  "rules": [
+    {
+      "min_score": 0.0,
+      "max_score": 0.20,
+      "actions": [],
+      "alert_level": "BENIGN"
+    },
+    {
+      "min_score": 0.20,
+      "max_score": 0.40,
+      "actions": ["log"],
+      "alert_level": "LOW"
+    },
+    {
+      "min_score": 0.40,
+      "max_score": 0.60,
+      "actions": ["log", "alert"],
+      "alert_level": "MEDIUM"
+    },
+    {
+      "min_score": 0.60,
+      "max_score": 0.80,
+      "actions": ["log", "alert"],
+      "alert_level": "HIGH"
+    },
+    {
+      "min_score": 0.80,
+      "max_score": 1.01,
+      "actions": ["log", "alert", "kill"],
+      "alert_level": "CRITICAL"
+    }
+  ]
+}

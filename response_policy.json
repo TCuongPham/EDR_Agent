@@ -1,0 +1,650 @@
+{
+  "_comment": "EDR AI Agent — Response Policy Configuration",
+  "_description": "File cấu hình các hành động xử lý tự động dựa trên Threat Score từ AI Engine",
+  "_version": "1.0.0",
+  "_last_updated": "2026-06-07",
+  "_author": "EDR Security Team",
+
+  "global_settings": {
+    "enabled": true,
+    "dry_run_mode": true,
+    "_comment_dry_run": "Khi dry_run_mode=true: agent LOG hành động nhưng KHÔNG thực sự thực thi. Dùng khi test/debug.",
+
+    "alert_cooldown_seconds": 30,
+    "_comment_cooldown": "Tránh alert flooding: cùng 1 PID sẽ không generate alert mới trong X giây kể từ alert trước",
+
+    "max_alerts_per_hour": 200,
+    "_comment_max_alerts": "Circuit breaker: nếu vượt ngưỡng này, tắt alerting tạm thời 10 phút để tránh storm",
+
+    "whitelist_mode": "strict",
+    "_comment_whitelist_mode": "strict=whitelist ghi đè tất cả ML score | lenient=whitelist chỉ giảm score, không tắt hẳn",
+
+    "auto_response_enabled": true,
+    "_comment_auto_response": "Bật/tắt toàn bộ auto-response (Kill/Block/Isolate). Alert luôn được gửi bất kể setting này.",
+
+    "telemetry_backend_enabled": false,
+    "_comment_backend": "Gửi alert metadata về backend SIEM/SOAR. Đặt false nếu chỉ chạy local.",
+    "telemetry_backend_url": "https://siem.example.com/api/v1/alerts",
+
+    "model_path": "./models/edr_model_int8.onnx",
+    "scaler_params_path": "./configs/scaler_params.json",
+
+    "log_level": "info",
+    "_comment_log_level": "debug | info | warn | error",
+    "log_path": "C:\\ProgramData\\EDRAgent\\logs\\agent.log",
+    "alert_log_path": "C:\\ProgramData\\EDRAgent\\alerts.jsonl",
+    "max_log_size_mb": 100,
+    "max_log_backups": 5
+  },
+
+  "score_thresholds": {
+    "_comment": "Định nghĩa ngưỡng threat score để phân loại mức độ và trigger actions",
+
+    "benign": {
+      "min": 0.0,
+      "max": 0.20,
+      "label": "BENIGN",
+      "description": "Hành vi bình thường — bỏ qua"
+    },
+    "low": {
+      "min": 0.20,
+      "max": 0.40,
+      "label": "LOW",
+      "description": "Dấu hiệu nhẹ — ghi log để phân tích sau"
+    },
+    "medium": {
+      "min": 0.40,
+      "max": 0.60,
+      "label": "MEDIUM",
+      "description": "Hành vi đáng ngờ — cần chú ý"
+    },
+    "high": {
+      "min": 0.60,
+      "max": 0.80,
+      "label": "HIGH",
+      "description": "Hành vi nguy hiểm cao — có thể là tấn công"
+    },
+    "critical": {
+      "min": 0.80,
+      "max": 1.01,
+      "label": "CRITICAL",
+      "description": "Hành vi cực kỳ nguy hiểm — hành động ngay lập tức"
+    }
+  },
+
+  "response_rules": {
+    "_comment": "Mỗi rule định nghĩa: điều kiện score + danh sách actions thực thi theo thứ tự",
+
+    "rule_benign": {
+      "name": "Benign — No Action",
+      "enabled": true,
+      "min_score": 0.0,
+      "max_score": 0.20,
+      "threat_level": "BENIGN",
+      "actions": [],
+      "_comment": "Không làm gì — chỉ drop event (không ghi log để tiết kiệm disk)"
+    },
+
+    "rule_low": {
+      "name": "Low Threat — Log Only",
+      "enabled": true,
+      "min_score": 0.20,
+      "max_score": 0.40,
+      "threat_level": "LOW",
+      "actions": [
+        {
+          "type": "log",
+          "enabled": true,
+          "params": {
+            "level": "debug",
+            "include_feature_vector": false,
+            "_comment": "Ghi vào debug log — không ghi vào alerts.jsonl chính"
+          }
+        }
+      ]
+    },
+
+    "rule_medium": {
+      "name": "Medium Threat — Alert + Log",
+      "enabled": true,
+      "min_score": 0.40,
+      "max_score": 0.60,
+      "threat_level": "MEDIUM",
+      "actions": [
+        {
+          "type": "alert",
+          "enabled": true,
+          "params": {
+            "log_to_file": true,
+            "send_to_backend": false,
+            "include_process_chain": true,
+            "include_feature_vector": false,
+            "notification_type": "none",
+            "_comment": "Chỉ ghi alert vào file, không notify user (tránh false positive noise)"
+          }
+        },
+        {
+          "type": "forensic_snapshot",
+          "enabled": true,
+          "params": {
+            "capture_process_memory": false,
+            "capture_network_connections": true,
+            "capture_open_files": true,
+            "capture_registry_hive": false,
+            "output_dir": "C:\\ProgramData\\EDRAgent\\forensics\\",
+            "_comment": "Thu thập thông tin forensics nhẹ để hỗ trợ phân tích sau"
+          }
+        }
+      ]
+    },
+
+    "rule_high": {
+      "name": "High Threat — Alert + Notify + Monitor",
+      "enabled": true,
+      "min_score": 0.60,
+      "max_score": 0.80,
+      "threat_level": "HIGH",
+      "actions": [
+        {
+          "type": "alert",
+          "enabled": true,
+          "params": {
+            "log_to_file": true,
+            "send_to_backend": true,
+            "include_process_chain": true,
+            "include_feature_vector": true,
+            "include_mitre_mapping": true,
+            "notification_type": "toast",
+            "_comment": "Toast notification hiển thị cho user — không panic, chỉ thông báo"
+          }
+        },
+        {
+          "type": "forensic_snapshot",
+          "enabled": true,
+          "params": {
+            "capture_process_memory": true,
+            "capture_network_connections": true,
+            "capture_open_files": true,
+            "capture_registry_hive": false,
+            "output_dir": "C:\\ProgramData\\EDRAgent\\forensics\\",
+            "max_memory_dump_mb": 256
+          }
+        },
+        {
+          "type": "monitor_process",
+          "enabled": true,
+          "params": {
+            "duration_seconds": 300,
+            "sample_interval_ms": 1000,
+            "track_child_processes": true,
+            "_comment": "Tăng cường giám sát process nghi ngờ trong 5 phút tiếp theo"
+          }
+        },
+        {
+          "type": "send_telemetry",
+          "enabled": true,
+          "params": {
+            "priority": "high",
+            "include_raw_events": true,
+            "max_events": 100
+          }
+        }
+      ]
+    },
+
+    "rule_critical": {
+      "name": "Critical Threat — Kill + Block + Alert",
+      "enabled": true,
+      "min_score": 0.80,
+      "max_score": 1.01,
+      "threat_level": "CRITICAL",
+      "actions": [
+        {
+          "type": "alert",
+          "enabled": true,
+          "params": {
+            "log_to_file": true,
+            "send_to_backend": true,
+            "include_process_chain": true,
+            "include_feature_vector": true,
+            "include_mitre_mapping": true,
+            "notification_type": "popup",
+            "_comment": "Popup dialog buộc user biết — đây là sự kiện nghiêm trọng"
+          }
+        },
+        {
+          "type": "forensic_snapshot",
+          "enabled": true,
+          "params": {
+            "capture_process_memory": true,
+            "capture_network_connections": true,
+            "capture_open_files": true,
+            "capture_registry_hive": true,
+            "output_dir": "C:\\ProgramData\\EDRAgent\\forensics\\",
+            "max_memory_dump_mb": 512,
+            "compress_output": true
+          }
+        },
+        {
+          "type": "kill_process",
+          "enabled": true,
+          "params": {
+            "terminate_children": true,
+            "_comment_children": "Kết thúc cả process tree để ngăn persistence qua child",
+            "kill_delay_ms": 0,
+            "kill_method": "TerminateProcess",
+            "_comment_method": "TerminateProcess (immediate) | NtTerminateProcess (kernel) | SuspendResume (gentler)",
+            "exclude_critical_pids": [4, 8, 88],
+            "_comment_exclude": "Không bao giờ kill: System (4), Registry (100+), csrss.exe — sẽ BSoD",
+            "require_confirmation": false,
+            "_comment_confirm": "false = tự động kill không hỏi user. true = hỏi user trước (giảm FP impact)"
+          }
+        },
+        {
+          "type": "block_network",
+          "enabled": true,
+          "params": {
+            "block_scope": "process",
+            "_comment_scope": "process=chỉ block PID đó | system=isolate toàn bộ endpoint (cực đoan)",
+            "block_direction": "both",
+            "_comment_direction": "outbound | inbound | both",
+            "block_duration_seconds": 3600,
+            "_comment_duration": "0 = vĩnh viễn cho đến khi admin manually unblock",
+            "whitelist_local": true,
+            "_comment_whitelist_local": "Vẫn cho phép kết nối localhost/127.0.0.1",
+            "create_firewall_rule": true,
+            "firewall_rule_name_prefix": "EDR_BLOCK_"
+          }
+        },
+        {
+          "type": "send_telemetry",
+          "enabled": true,
+          "params": {
+            "priority": "critical",
+            "include_raw_events": true,
+            "max_events": 500,
+            "include_memory_dump_hash": true
+          }
+        }
+      ]
+    }
+  },
+
+  "special_rules": {
+    "_comment": "Rules đặc biệt ghi đè score-based rules cho các tình huống cụ thể",
+
+    "rule_ransomware_immediate": {
+      "name": "Ransomware Detection — Immediate Response",
+      "enabled": true,
+      "description": "Khi phát hiện pattern ransomware (mass file encrypt), hành động ngay không cần đợi score >= 0.8",
+      "trigger_conditions": {
+        "mode": "AND",
+        "conditions": [
+          { "field": "file_write_rate_per_sec", "operator": ">=", "value": 5.0 },
+          { "field": "max_file_entropy_30s", "operator": ">=", "value": 7.5 },
+          { "field": "extension_changed_count_300s", "operator": ">=", "value": 10 }
+        ]
+      },
+      "override_min_score": 0.0,
+      "actions": [
+        { "type": "alert", "params": { "notification_type": "popup" } },
+        { "type": "kill_process", "params": { "terminate_children": true } },
+        { "type": "block_network", "params": { "block_scope": "process" } },
+        { "type": "forensic_snapshot", "params": { "capture_process_memory": true } }
+      ],
+      "mitre_techniques": ["T1486", "T1490"]
+    },
+
+    "rule_lsass_dump": {
+      "name": "LSASS Memory Access — Immediate Alert",
+      "enabled": true,
+      "description": "Bất kỳ process nào (trừ whitelist) access LSASS với rights dump credentials → alert CRITICAL ngay",
+      "trigger_conditions": {
+        "mode": "AND",
+        "conditions": [
+          { "field": "lsass_access", "operator": "==", "value": 1 },
+          { "field": "is_credential_dump_rights", "operator": "==", "value": 1 }
+        ]
+      },
+      "override_min_score": 0.0,
+      "actions": [
+        { "type": "alert", "params": { "notification_type": "popup", "threat_level": "CRITICAL" } },
+        { "type": "forensic_snapshot", "params": { "capture_process_memory": true } },
+        { "type": "send_telemetry", "params": { "priority": "critical" } }
+      ],
+      "_comment": "Không kill process ngay — có thể FP với Windows Defender, AV, memory analysis tools",
+      "mitre_techniques": ["T1003.001"]
+    },
+
+    "rule_c2_beacon": {
+      "name": "C2 Beaconing Detection",
+      "enabled": true,
+      "description": "Phát hiện beaconing pattern (beacon_score > 0.85 + known_bad hoặc TOR)",
+      "trigger_conditions": {
+        "mode": "OR",
+        "conditions": [
+          {
+            "mode": "AND",
+            "conditions": [
+              { "field": "beacon_score", "operator": ">=", "value": 0.85 },
+              { "field": "connected_to_known_bad", "operator": "==", "value": 1 }
+            ]
+          },
+          {
+            "mode": "AND",
+            "conditions": [
+              { "field": "beacon_score", "operator": ">=", "value": 0.90 },
+              { "field": "connected_to_tor", "operator": "==", "value": 1 }
+            ]
+          }
+        ]
+      },
+      "override_min_score": 0.0,
+      "actions": [
+        { "type": "alert", "params": { "notification_type": "toast", "threat_level": "HIGH" } },
+        {
+          "type": "block_network",
+          "params": {
+            "block_scope": "process",
+            "block_direction": "outbound",
+            "block_duration_seconds": 1800
+          }
+        },
+        { "type": "send_telemetry", "params": { "priority": "high" } }
+      ],
+      "mitre_techniques": ["T1071.001", "T1573"]
+    },
+
+    "rule_office_macro_spawn": {
+      "name": "Office Macro Spawning Script Engine",
+      "enabled": true,
+      "description": "Phát hiện Office ứng dụng spawning PowerShell/cmd/wscript (macro execution)",
+      "trigger_conditions": {
+        "mode": "AND",
+        "conditions": [
+          { "field": "parent_is_office", "operator": "==", "value": 1 },
+          { "field": "process_name", "operator": "in", "value": ["powershell.exe", "cmd.exe", "wscript.exe", "cscript.exe", "mshta.exe"] }
+        ]
+      },
+      "override_min_score": 0.0,
+      "actions": [
+        { "type": "alert", "params": { "notification_type": "toast", "threat_level": "HIGH" } },
+        { "type": "forensic_snapshot", "params": {} },
+        { "type": "monitor_process", "params": { "duration_seconds": 600 } }
+      ],
+      "mitre_techniques": ["T1059.001", "T1204.002"]
+    },
+
+    "rule_shadow_copy_delete": {
+      "name": "Shadow Copy Deletion — Ransomware Indicator",
+      "enabled": true,
+      "description": "vssadmin/wmic delete shadows — tiêu biểu trước khi ransomware mã hóa",
+      "trigger_conditions": {
+        "mode": "AND",
+        "conditions": [
+          { "field": "process_name", "operator": "in", "value": ["vssadmin.exe", "wmic.exe", "wbadmin.exe"] },
+          { "field": "cmdline_contains_shadow", "operator": "==", "value": 1 }
+        ]
+      },
+      "override_min_score": 0.0,
+      "actions": [
+        { "type": "alert", "params": { "notification_type": "popup", "threat_level": "CRITICAL" } },
+        { "type": "kill_process", "params": { "terminate_children": false } },
+        { "type": "forensic_snapshot", "params": { "capture_process_memory": false } }
+      ],
+      "mitre_techniques": ["T1490"]
+    }
+  },
+
+  "whitelist": {
+    "_comment": "Processes/paths được tin tưởng hoàn toàn — KHÔNG áp dụng ML inference",
+    "_warning": "Thêm vào whitelist cẩn thận — kẻ tấn công có thể giả mạo process name!",
+
+    "trusted_processes": {
+      "_comment": "Match theo process NAME + PATH kết hợp để tránh spoofing",
+      "entries": [
+        {
+          "name": "MsMpEng.exe",
+          "path_prefix": "C:\\ProgramData\\Microsoft\\Windows Defender\\",
+          "description": "Windows Defender Antivirus Engine",
+          "verify_signature": true
+        },
+        {
+          "name": "svchost.exe",
+          "path_prefix": "C:\\Windows\\System32\\",
+          "description": "Windows Service Host",
+          "verify_signature": true,
+          "_warning": "svchost.exe bên ngoài System32 là red flag"
+        },
+        {
+          "name": "WmiPrvSE.exe",
+          "path_prefix": "C:\\Windows\\System32\\wbem\\",
+          "description": "WMI Provider Service",
+          "verify_signature": true
+        },
+        {
+          "name": "SearchIndexer.exe",
+          "path_prefix": "C:\\Windows\\System32\\",
+          "description": "Windows Search Indexer",
+          "verify_signature": true
+        }
+      ]
+    },
+
+    "trusted_paths": {
+      "_comment": "Files trong các paths này được giảm score (không whitelist hoàn toàn)",
+      "paths": [
+        "C:\\Windows\\System32\\",
+        "C:\\Windows\\SysWOW64\\",
+        "C:\\Program Files\\Microsoft Visual Studio\\",
+        "C:\\Program Files\\Git\\",
+        "C:\\Program Files\\CMake\\"
+      ],
+      "score_multiplier": 0.5,
+      "_comment_multiplier": "Score từ trusted path được nhân với 0.5 (giảm 50%)"
+    },
+
+    "trusted_certificate_signers": {
+      "_comment": "Processes được ký bởi các signer này có score giảm",
+      "signers": [
+        "Microsoft Corporation",
+        "Microsoft Windows",
+        "Google LLC",
+        "Mozilla Corporation",
+        "Adobe Inc."
+      ],
+      "score_multiplier": 0.7
+    }
+  },
+
+  "notification_config": {
+    "_comment": "Cấu hình các kênh thông báo",
+
+    "toast": {
+      "enabled": true,
+      "title_template": "⚠️ Security Alert — {threat_level}",
+      "body_template": "Suspicious activity detected: {process_name} (Score: {threat_score:.2f})",
+      "duration_seconds": 10,
+      "action_button": "View Details"
+    },
+
+    "popup": {
+      "enabled": true,
+      "title_template": "🚨 CRITICAL Security Alert",
+      "body_template": "CRITICAL threat detected!\n\nProcess: {process_name}\nScore: {threat_score:.2f}\nAction: {actions_taken}\n\nProcess has been terminated.",
+      "modal": true,
+      "require_user_ack": false
+    },
+
+    "sound": {
+      "enabled": false,
+      "sound_file": "",
+      "_comment": "Tắt sound để không làm phiền người dùng"
+    },
+
+    "email": {
+      "enabled": false,
+      "smtp_server": "",
+      "smtp_port": 587,
+      "from": "edr-agent@company.com",
+      "to": ["security@company.com"],
+      "min_level_to_email": "CRITICAL",
+      "_comment": "Tắt email trong POC — bật khi production deploy"
+    },
+
+    "webhook": {
+      "enabled": false,
+      "url": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
+      "method": "POST",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "payload_template": "{\"text\": \"*[EDR Alert]* {threat_level}: {process_name} on {hostname} (Score: {threat_score:.2f})\"}",
+      "min_level_to_send": "HIGH",
+      "timeout_seconds": 5,
+      "retry_count": 2
+    }
+  },
+
+  "forensic_config": {
+    "_comment": "Cấu hình thu thập forensic artifacts khi có alert",
+
+    "output_directory": "C:\\ProgramData\\EDRAgent\\forensics\\",
+    "max_storage_gb": 5,
+    "compression_enabled": true,
+    "retention_days": 30,
+    "_comment_retention": "Tự động xóa forensic data sau 30 ngày",
+
+    "process_memory": {
+      "enabled": true,
+      "max_dump_size_mb": 512,
+      "dump_format": "minidump",
+      "_comment_format": "minidump | full — minidump nhỏ hơn nhưng ít thông tin hơn",
+      "include_heap": true,
+      "include_stack": true
+    },
+
+    "network_snapshot": {
+      "enabled": true,
+      "capture_active_connections": true,
+      "capture_listening_ports": true,
+      "capture_arp_table": true,
+      "capture_dns_cache": true
+    },
+
+    "process_tree_snapshot": {
+      "enabled": true,
+      "include_loaded_dlls": true,
+      "include_handles": false,
+      "_comment_handles": "Handles có thể rất nhiều — tắt để tránh overhead"
+    },
+
+    "registry_snapshot": {
+      "enabled": false,
+      "hives": ["HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"],
+      "_comment": "Chỉ bật khi cần — registry dump rất chậm"
+    }
+  },
+
+  "isolation_config": {
+    "_comment": "Cấu hình network isolation toàn endpoint (chỉ dùng khi score = 1.0 hoặc manual trigger)",
+    "_warning": "Isolate endpoint sẽ ngắt kết nối TOÀN BỘ network — dùng cực kỳ thận trọng!",
+
+    "enabled": false,
+    "_comment_enabled": "Mặc định TẮT — chỉ bật trong production với approval process",
+    "auto_trigger_score": 1.0,
+    "_comment_trigger": "Chỉ auto-isolate khi score = 1.0 (certainty) — không trigger ở mức thấp hơn",
+
+    "allow_exceptions": [
+      "127.0.0.1",
+      "::1",
+      "10.0.0.1"
+    ],
+    "_comment_exceptions": "Vẫn cho phép localhost và gateway để admin vẫn có thể kết nối",
+
+    "isolation_duration_minutes": 60,
+    "_comment_duration": "0 = cho đến khi manually lifted",
+
+    "notify_admin": true,
+    "admin_contact": "security@company.com"
+  },
+
+  "tuning_parameters": {
+    "_comment": "Parameters để tinh chỉnh False Positive/False Negative tradeoff",
+
+    "score_boost_factors": {
+      "_comment": "Các yếu tố làm tăng score khi có context nhất định",
+      "lineage_pattern_match": 0.20,
+      "multiple_indicators": 0.15,
+      "_comment_multiple": "Áp dụng khi aggregate_threat_indicator_count >= 3",
+      "out_of_hours_execution": 0.10,
+      "_comment_hours": "Process tạo ra ngoài giờ làm việc (23:00-06:00 weekdays, all weekend)",
+      "new_process_never_seen_before": 0.10,
+      "running_from_temp_dir": 0.15
+    },
+
+    "score_reduction_factors": {
+      "_comment": "Các yếu tố làm giảm score để giảm False Positive",
+      "signed_by_trusted_vendor": 0.70,
+      "process_in_known_software_dir": 0.80,
+      "low_network_activity_last_30s": 0.90
+    },
+
+    "business_hours": {
+      "timezone": "Asia/Ho_Chi_Minh",
+      "weekday_start": "08:00",
+      "weekday_end": "18:00",
+      "working_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    }
+  },
+
+  "mitre_attack_mapping": {
+    "_comment": "Ánh xạ từ alert indicators sang MITRE ATT&CK tactics/techniques",
+
+    "office_spawn_script": {
+      "tactics": ["Execution", "Initial Access"],
+      "techniques": ["T1204.002", "T1059.001"],
+      "description": "Office application spawning script interpreter"
+    },
+    "encoded_powershell": {
+      "tactics": ["Defense Evasion", "Execution"],
+      "techniques": ["T1027.010", "T1059.001"],
+      "description": "Obfuscated/encoded PowerShell command"
+    },
+    "lolbin_abuse": {
+      "tactics": ["Defense Evasion", "Execution"],
+      "techniques": ["T1218.011", "T1218.010", "T1218.005"],
+      "description": "Living-off-the-Land Binary abuse"
+    },
+    "lsass_access": {
+      "tactics": ["Credential Access"],
+      "techniques": ["T1003.001"],
+      "description": "LSASS memory access for credential dumping"
+    },
+    "persistence_registry": {
+      "tactics": ["Persistence"],
+      "techniques": ["T1547.001"],
+      "description": "Registry Run/RunOnce key modification"
+    },
+    "ransomware_pattern": {
+      "tactics": ["Impact"],
+      "techniques": ["T1486", "T1490"],
+      "description": "Mass file encryption and shadow copy deletion"
+    },
+    "c2_beaconing": {
+      "tactics": ["Command and Control"],
+      "techniques": ["T1071.001", "T1573", "T1008"],
+      "description": "Regular outbound connections indicating C2 beaconing"
+    },
+    "dga_domain": {
+      "tactics": ["Command and Control"],
+      "techniques": ["T1568.002"],
+      "description": "Domain Generation Algorithm detected in DNS queries"
+    },
+    "wmi_execution": {
+      "tactics": ["Execution", "Lateral Movement"],
+      "techniques": ["T1047"],
+      "description": "WMI used for remote/local execution"
+    }
+  }
+}
