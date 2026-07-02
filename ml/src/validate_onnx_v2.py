@@ -20,9 +20,9 @@ def main():
     lgb_model = joblib.load(pkl_path)
     ort_session = ort.InferenceSession(onnx_path)
     
-    # Generate 100 dummy samples to check (19 features in v2)
+    # Generate 100 dummy samples to check (16 features in v2 — binary model)
     np.random.seed(42)
-    dummy_input = np.random.rand(100, 19).astype(np.float32)
+    dummy_input = np.random.rand(100, 16).astype(np.float32)
     
     # Python predictions
     py_probs = lgb_model.predict(dummy_input)
@@ -34,10 +34,10 @@ def main():
         sample = dummy_input[i:i+1]
         onnx_results = ort_session.run(None, {input_name: sample})
         
-        # Extract probabilities
+        # Binary model: output[1] shape [1, 2] -> P(Benign), P(Malware)
         onnx_probs_raw = onnx_results[1]
         if isinstance(onnx_probs_raw, list) and len(onnx_probs_raw) > 0 and isinstance(onnx_probs_raw[0], dict):
-            prob = np.array([onnx_probs_raw[0][0], onnx_probs_raw[0][1], onnx_probs_raw[0][2]], dtype=np.float32)
+            prob = np.array([onnx_probs_raw[0][0], onnx_probs_raw[0][1]], dtype=np.float32)
         elif isinstance(onnx_probs_raw, list):
             prob = np.array(onnx_probs_raw[0], dtype=np.float32)
         else:
@@ -46,12 +46,13 @@ def main():
         
     onnx_probs = np.array(onnx_probs_list, dtype=np.float32)
         
-    # Check max difference
-    diff = np.abs(py_probs - onnx_probs)
+    # Check max difference (convert 1D py_probs to 2D matching ONNX shape)
+    py_probs_2d = np.column_stack((1.0 - py_probs, py_probs))
+    diff = np.abs(py_probs_2d - onnx_probs)
     max_diff = np.max(diff)
     mean_diff = np.mean(diff)
     
-    print(f"[*] Comparing Python vs ONNX model v2 (19 features):")
+    print(f"[*] Comparing Python vs ONNX model v2 (16 features, binary):")
     print(f"    - Maximum probability difference: {max_diff:.2e}")
     print(f"    - Mean probability difference: {mean_diff:.2e}")
     

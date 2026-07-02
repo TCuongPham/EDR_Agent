@@ -25,8 +25,8 @@ def main():
     print(f"[*] Loading LightGBM model from {lgb_model_path}...")
     model = lgb.Booster(model_file=lgb_model_path)
 
-    # We have exactly 19 features in v2
-    input_features_count = 19
+    # We have exactly 16 features in v2 (19 original selected − 3 credential-specific features removed)
+    input_features_count = 16
     print(f"[*] Converting model to ONNX (Input shape: [1, {input_features_count}])...")
     
     initial_type = [('input', FloatTensorType([1, input_features_count]))]

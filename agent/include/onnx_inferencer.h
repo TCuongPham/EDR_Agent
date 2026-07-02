@@ -113,12 +113,10 @@ public:
                 m_outputNames.data(), m_outputNames.size()
             );
 
-            // Multiclass probabilities: shape [1, 3] -> P(Benign), P(Malware), P(Credential)
+            // Binary probabilities: shape [1, 2] -> P(Benign), P(Malware)
+            // Threat score = P(Malware) directly — full [0.0, 1.0] range utilized
             float* probabilities = outputTensors[1].GetTensorMutableData<float>();
-            
-            // Custom threat scoring formula:
-            // P(Benign) * 0.0 + P(Malware) * 0.5 + P(Credential) * 1.0
-            float threatScore = probabilities[1] * 0.5f + probabilities[2] * 1.0f;
+            float threatScore = probabilities[1];
             
             return std::clamp(threatScore, 0.0f, 1.0f);
         } catch (const std::exception& e) {

@@ -29,12 +29,12 @@
 │                                                                    │
 │  ┌─────────────────────────────────────────────────────────────┐  │
 │  │               EDR SENSOR LAYER (ETW / WMI)                  │  │
-│  │   Process Monitor  │ Registry   │
+│  │                     Process Monitor
 │  └──────────────────────────┬──────────────────────────────────┘  │
 │                             │                                      │
 │                             ▼                                      │
 │  ┌─────────────────────────────────────────────────────────────┐  │
-│  │           TELEMETRY PIPELINE                                 │  │
+│  │                    TELEMETRY PIPELINE                        │  │
 │  │   Event Normalizer → JSON Struct → In-memory Ring Buffer     │  │
 │  │   Persistent Storage: SQLite 3 (WAL mode)                    │  │
 │  └──────────────────────────┬──────────────────────────────────┘  │
@@ -56,7 +56,7 @@
 │                             ▼                                      │
 │  ┌─────────────────────────────────────────────────────────────┐  │
 │  │                   RESPONSE ENGINE                            │  │
-│  │   Alert  │  Kill Process  │  Block Network                   │  │
+│  │                  Alert  │  Kill Process                      │  │
 │  └─────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -68,11 +68,7 @@
 
 - **Thu thập sự kiện Windows** qua WMI (Windows Management Instrumentation):
   - `PROCESS_CREATE` / `PROCESS_EXIT` — giám sát vòng đời tiến trình
-  - `FILE_CREATE` / `FILE_WRITE` / `FILE_DELETE` — hoạt động file system
-  - `NETWORK_CONNECT` / `NETWORK_ACCEPT` — kết nối mạng
-  - `REGISTRY_SET` / `REGISTRY_DELETE` — thay đổi registry
-- **Registry Collector** theo dõi run keys persistence
-- **CollectorRegistry** — quản lý đăng ký / hủy đăng ký collector động
+
 - Mỗi event được gắn timestamp UTC (ISO 8601), process ID, process name, command line
 
 ### 2. Telemetry Normalizer (`agent/src/pipeline/`)
@@ -93,7 +89,7 @@
 - Xây dựng cây quan hệ cha-con giữa các tiến trình (PID → PPID)
 - Tính **độ sâu chuỗi tiến trình** (chain depth) để phát hiện process injection
 - Phát hiện **command-line injection patterns**: `powershell -enc`, `cmd /c`, `wscript`...
-- Cung cấp feature: `process_chain_depth`, `parent_is_browser`, `parent_is_office`
+- Cung cấp feature: `process_chain_depth`
 
 ### 5. Sliding Window Feature Extractor (`agent/src/features/sliding_window.cpp`)
 
@@ -113,13 +109,13 @@
 - Load model `.onnx` tại runtime từ `agent_config.json`
 - Hỗ trợ **Dynamic Input Shape** — tự động query số feature từ metadata session
 - Load **scaler params** (`scaler_params.json`) để chuẩn hóa input trước khi inference
-- Output: xác suất 3 lớp — `Benign`, `Malware`, `CredentialAccess`
+- Output: xác suất 2 lớp — `Benign`, `Malware`
 
 ### 8. Rule Engine (`agent/include/rule_engine.h`)
 
 - **Tier-1 fast-path** trước khi gọi ONNX model
-- Load rules từ `response_policy.json` (~80 rules)
-- Phát hiện nhanh: Mimikatz, PowerShell Empire, encoded commands, LSASS dump, network beaconing
+- Load rules từ `response_policy.json`
+- Phát hiện nhanh: Mimikatz, PowerShell Empire, encoded commands
 - Hỗ trợ: `contains`, `regex`, `greater_than`, `less_than`, `equals` operators
 - Tránh false positive bằng whitelist process name
 
@@ -131,10 +127,9 @@
 
 ### 10. Response Engine (`agent/src/response/`)
 
-- **`alert.cpp`** — Ghi alert ra SQLite (`alert_events` table) + console log màu
+- **`alert.cpp`** — Ghi alert
 - **`kill_process.cpp`** — Gọi `TerminateProcess()` Windows API để kill process độc hại
 - **`block_network.cpp`** — Stub cho Windows Firewall / WFP rule injection
-- Mỗi action được audit log với timestamp và lý do
 
 ### 11. Main Agent Loop (`agent/src/main.cpp`)
 
@@ -188,7 +183,7 @@
 - **`simulate3.ps1`** — Mô phỏng ransomware file encryption burst
 - **`simulate4.ps1`** — Mô phỏng C2 beaconing + lateral movement
 
-### 14. 📚 Documentation (`docs/`)
+### 14. Documentation (`docs/`)
 
 | File | Nội dung |
 |------|----------|
@@ -201,7 +196,7 @@
 
 ---
 
-## 📁 Cấu trúc thư mục
+## Cấu trúc thư mục
 
 ```
 EDR_AI_Agent/
@@ -307,9 +302,9 @@ EDR_AI_Agent/
 
 ---
 
-## 🚀 Hướng dẫn Build & Chạy
+## Hướng dẫn Build & Chạy
 
-> ⚠️ **Yêu cầu chạy CMD/PowerShell với quyền Administrator**
+> **Yêu cầu chạy CMD/PowerShell với quyền Administrator**
 
 ### Prerequisites
 
@@ -337,7 +332,7 @@ cd D:\Universe\VCS\EDR_AI_Agent\build\agent\Release
 
 ---
 
-## 🧪 ML Pipeline
+## ML Pipeline
 
 ### Cài đặt Python dependencies
 
@@ -354,7 +349,7 @@ pip install -r requirements.txt
 # Chạy EDA
 python src/run_eda.py
 
-# Train v2 (khuyến nghị)
+# Train v2
 python src/train_v2.py
 
 # Export ONNX
@@ -369,23 +364,23 @@ python src/validate_onnx_v2.py
 
 ---
 
-> ⚠️ **Chỉ chạy trong môi trường sandbox/VM có snapshot. Không chạy trên máy thật.**
+> **Chỉ chạy trong môi trường sandbox/VM có snapshot. Không chạy trên máy thật.**
 
 
-## ⚙️ Cấu hình
+## Cấu hình
 
 ### `agent/configs/agent_config.json`
 
 Cấu hình chính của agent:
 - Đường dẫn ONNX model
-- Ngưỡng điểm: `alert_threshold`, `kill_threshold`, `block_threshold`
+- Ngưỡng điểm: `alert_threshold`, `kill_threshold`
 - Kích thước ring buffer
 - Sliding window size (giây)
 
 ### `agent/configs/response_policy.json`
 
 Các rule phát hiện nhanh (Tier-1):
-- ~80 rules bao gồm: Mimikatz, PowerShell Empire, encoded commands, LSASS dump, network beaconing
+- rules bao gồm: Mimikatz, PowerShell Empire, encoded commands
 - Hỗ trợ operators: `contains`, `regex`, `greater_than`, `equals`
 
 ### `response_policy.json` (root)
@@ -409,7 +404,7 @@ Global response policy với action mapping theo mức độ threat score.
 | Hybrid Scorer | ✅ Hoàn thành |
 | Response: Alert | ✅ Hoàn thành |
 | Response: Kill Process | ✅ Hoàn thành |
-| Response: Block Network | 🔧 Stub (WFP chưa hoàn thiện) |
+| Response: Block Network | (chưa hoàn thiện) |
 | ML Training v1 | ✅ Hoàn thành |
 | ML Training v2 (augmented) | ✅ Hoàn thành |
 | ONNX Export & Quantize | ✅ Hoàn thành |

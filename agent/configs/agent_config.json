@@ -31,10 +31,10 @@
       "comment": "Microsoft-Windows-Kernel-Network — Event 10 (TcpIp/Connect)"
     },
     "registry": {
-      "enabled": true,
+      "enabled": false,
       "provider_guid": "70eb4f03-c1de-4f73-a051-33d13d5413bd",
       "keywords": "0x1",
-      "comment": "Microsoft-Windows-Kernel-Registry — Event 1 (CreateKey), Event 5 (SetValueKey)"
+      "comment": "Microsoft-Windows-Kernel-Registry — Disabled: registry features (persistence_key_access, reg_sam_security_access) removed from feature vector"
     }
   },
   "sliding_window_seconds": [5, 30, 300],

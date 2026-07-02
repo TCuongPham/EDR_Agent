@@ -1,14 +1,19 @@
 # ml/src/train_v2.py
 # ============================================================
-# Phiên bản huấn luyện thứ 2 (Feature-Selected)
-# Sử dụng 19/25 đặc trưng sau khi loại bỏ các đặc trưng
-# không có ích theo kết quả EDA:
+# Phiên bản huấn luyện thứ 2 (Feature-Selected, Binary)
+# Phân loại nhị phân: Benign (0) vs Malware (1)
+# Sử dụng 16/25 đặc trưng sau khi loại bỏ các đặc trưng
+# không có ích theo kết quả EDA, và các đặc trưng đặc thù
+# Credential Dumping (đã loại bỏ class này):
 #   - child_spawn_count_5s     (index 0)  -> tương quan 0.93 với _30s
 #   - child_spawn_count_300s   (index 2)  -> tương quan 0.88 với _30s
 #   - parent_is_office         (index 12) -> Gini 0.004%, thiếu kịch bản
 #   - parent_is_browser        (index 13) -> Gini 0.5%, thiếu kịch bản
 #   - process_rarity_score     (index 19) -> logic nghịch lý (benign > malware)
 #   - persistence_key_access   (index 23) -> hằng số = 0, std = 0
+#   - lsass_access             (index 21) -> đặc thù Credential Dumping, đã loại class
+#   - access_rights_vm_read    (index 22) -> đặc thù Credential Dumping, đã loại class
+#   - reg_sam_security_access  (index 24) -> đặc thù Credential Dumping, đã loại class
 # ============================================================
 
 import os
@@ -55,6 +60,7 @@ ALL_FEATURE_NAMES = [
 ]
 
 # Tập các đặc trưng bị loại bỏ dựa theo kết quả EDA
+# và loại bỏ Credential class (3 đặc trưng cuối)
 DROPPED_FEATURES = {
     "child_spawn_count_5s",
     "child_spawn_count_300s",
@@ -62,6 +68,10 @@ DROPPED_FEATURES = {
     "parent_is_browser",
     "process_rarity_score",
     "persistence_key_access",
+    # Credential-specific features — loại bỏ cùng với Credential class
+    "lsass_access",
+    "access_rights_vm_read",
+    "reg_sam_security_access",
 }
 
 # Tập đặc trưng được giữ lại (19 đặc trưng)
@@ -134,23 +144,21 @@ def main():
         print(f"    [{i:2d}] {f}")
 
     # --------------------------------------------------------
-    # 1. Tải dữ liệu từ 3 database SQLite
+    # 1. Tải dữ liệu từ 2 database SQLite (Binary: Benign vs Malware)
+    #    Credential class đã được loại bỏ khỏi pipeline
     # --------------------------------------------------------
-    print("\n[1] Loading raw events from SQLite databases...")
+    print("\n[1] Loading raw events from SQLite databases (Binary mode)...")
     benign_path  = os.path.join(data_dir, "benign_events.db")
     malware_path = os.path.join(data_dir, "malware_events.db")
-    cred_path    = os.path.join(data_dir, "credential_events.db")
 
     X_benign  = load_db_features(benign_path)
     X_malware = load_db_features(malware_path)
-    X_cred    = load_db_features(cred_path)
 
     print(f"    - Benign samples  (Label 0): {len(X_benign)}")
     print(f"    - Malware samples (Label 1): {len(X_malware)}")
-    print(f"    - Credential samples (Label 2): {len(X_cred)}")
 
-    X_raw = X_benign + X_malware + X_cred
-    y_raw = [0]*len(X_benign) + [1]*len(X_malware) + [2]*len(X_cred)
+    X_raw = X_benign + X_malware
+    y_raw = [0]*len(X_benign) + [1]*len(X_malware)
 
     if len(X_raw) == 0:
         print("\n[!] ERROR: No valid training data found.")
@@ -187,7 +195,7 @@ def main():
     print("    - Classification Report:")
     print(classification_report(
         y_test, rf_preds,
-        target_names=["Benign", "Malware", "Credential"]
+        target_names=["Benign", "Malware"]
     ))
 
     # Lưu RF model
@@ -201,9 +209,8 @@ def main():
 
     def objective(trial):
         params = {
-            'objective':         'multiclass',
-            'num_class':         3,
-            'metric':            'multi_logloss',
+            'objective':         'binary',
+            'metric':            'binary_logloss',
             'boosting_type':     'gbdt',
             'learning_rate':     trial.suggest_float('learning_rate', 0.01, 0.2),
             'num_leaves':        trial.suggest_int('num_leaves', 15, 127),
@@ -226,8 +233,9 @@ def main():
             callbacks=[lgb.early_stopping(stopping_rounds=15, verbose=False)]
         )
 
+        # Binary: predict trả về xác suất lớp 1 (Malware), ngưỡng 0.5
         preds       = model.predict(X_val)
-        pred_labels = np.argmax(preds, axis=1)
+        pred_labels = (preds >= 0.5).astype(int)
         return accuracy_score(y_val, pred_labels)
 
     study = optuna.create_study(direction='maximize')
@@ -244,9 +252,8 @@ def main():
     print("\n[5] Training final LightGBM with best parameters...")
     best_params = study.best_params.copy()
     best_params.update({
-        'objective':    'multiclass',
-        'num_class':    3,
-        'metric':       'multi_logloss',
+        'objective':    'binary',
+        'metric':       'binary_logloss',
         'verbose':      -1,
         'random_state': 42,
     })
@@ -265,12 +272,13 @@ def main():
     # 6. Đánh giá mô hình LightGBM cuối cùng trên tập Test
     # --------------------------------------------------------
     print("\n[6] Evaluating final LightGBM on Test set...")
+    # Binary: predict trả về xác suất lớp 1 (Malware), ngưỡng 0.5
     lgb_preds       = best_lgb.predict(X_test)
-    lgb_pred_labels = np.argmax(lgb_preds, axis=1)
+    lgb_pred_labels = (lgb_preds >= 0.5).astype(int)
     lgb_acc         = accuracy_score(y_test, lgb_pred_labels)
 
     try:
-        roc_auc = roc_auc_score(y_test, lgb_preds, multi_class='ovr')
+        roc_auc = roc_auc_score(y_test, lgb_preds)
         print(f"    - LightGBM Test Accuracy : {lgb_acc:.4f}  (ROC-AUC: {roc_auc:.4f})")
     except Exception:
         print(f"    - LightGBM Test Accuracy : {lgb_acc:.4f}")
@@ -278,7 +286,7 @@ def main():
     print("    - Classification Report:")
     print(classification_report(
         y_test, lgb_pred_labels,
-        target_names=["Benign", "Malware", "Credential"]
+        target_names=["Benign", "Malware"]
     ))
 
     # --------------------------------------------------------

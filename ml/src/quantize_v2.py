@@ -1,4 +1,6 @@
 # ml/src/quantize_v2.py
+# Lượng tử hóa (INT8) mô hình ONNX binary (16 features: Benign vs Malware)
+# Chạy sau export_onnx_v2.py để giảm kích thước model trước khi deploy vào agent.
 import os
 import shutil
 from onnxruntime.quantization import quantize_dynamic, QuantType

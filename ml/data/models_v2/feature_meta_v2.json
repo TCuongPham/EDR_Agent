@@ -1,6 +1,6 @@
 {
   "version": "v2",
-  "n_features": 19,
+  "n_features": 16,
   "feature_names": [
     "child_spawn_count_30s",
     "cmdline_length",
@@ -17,10 +17,7 @@
     "is_in_system_path",
     "lifetime_ms_log",
     "unusual_parent_child",
-    "tree_fan_out_max",
-    "lsass_access",
-    "access_rights_vm_read",
-    "reg_sam_security_access"
+    "tree_fan_out_max"
   ],
   "selected_indices_from_original_25": [
     1,
@@ -38,20 +35,20 @@
     16,
     17,
     18,
-    20,
-    21,
-    22,
-    24
+    20
   ],
   "dropped_features": [
-    "parent_is_office",
+    "reg_sam_security_access",
     "child_spawn_count_5s",
-    "parent_is_browser",
     "persistence_key_access",
+    "lsass_access",
     "process_rarity_score",
-    "child_spawn_count_300s"
+    "access_rights_vm_read",
+    "parent_is_browser",
+    "child_spawn_count_300s",
+    "parent_is_office"
   ],
-  "lgbm_best_accuracy_val": 0.9764982373678026,
-  "lgbm_test_accuracy": 0.9712272460364063,
-  "rf_test_accuracy": 0.9635936582501468
+  "lgbm_best_accuracy_val": 0.984006734006734,
+  "lgbm_test_accuracy": 0.9688814129520605,
+  "rf_test_accuracy": 0.9663582842724979
 }

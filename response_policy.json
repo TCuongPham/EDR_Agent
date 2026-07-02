@@ -42,30 +42,30 @@
 
     "benign": {
       "min": 0.0,
-      "max": 0.20,
+      "max": 0.2,
       "label": "BENIGN",
       "description": "Hành vi bình thường — bỏ qua"
     },
     "low": {
-      "min": 0.20,
-      "max": 0.40,
+      "min": 0.2,
+      "max": 0.4,
       "label": "LOW",
       "description": "Dấu hiệu nhẹ — ghi log để phân tích sau"
     },
     "medium": {
-      "min": 0.40,
-      "max": 0.60,
+      "min": 0.4,
+      "max": 0.6,
       "label": "MEDIUM",
       "description": "Hành vi đáng ngờ — cần chú ý"
     },
     "high": {
-      "min": 0.60,
-      "max": 0.80,
+      "min": 0.6,
+      "max": 0.8,
       "label": "HIGH",
       "description": "Hành vi nguy hiểm cao — có thể là tấn công"
     },
     "critical": {
-      "min": 0.80,
+      "min": 0.8,
       "max": 1.01,
       "label": "CRITICAL",
       "description": "Hành vi cực kỳ nguy hiểm — hành động ngay lập tức"
@@ -79,7 +79,7 @@
       "name": "Benign — No Action",
       "enabled": true,
       "min_score": 0.0,
-      "max_score": 0.20,
+      "max_score": 0.2,
       "threat_level": "BENIGN",
       "actions": [],
       "_comment": "Không làm gì — chỉ drop event (không ghi log để tiết kiệm disk)"
@@ -88,8 +88,8 @@
     "rule_low": {
       "name": "Low Threat — Log Only",
       "enabled": true,
-      "min_score": 0.20,
-      "max_score": 0.40,
+      "min_score": 0.2,
+      "max_score": 0.4,
       "threat_level": "LOW",
       "actions": [
         {
@@ -107,8 +107,8 @@
     "rule_medium": {
       "name": "Medium Threat — Alert + Log",
       "enabled": true,
-      "min_score": 0.40,
-      "max_score": 0.60,
+      "min_score": 0.4,
+      "max_score": 0.6,
       "threat_level": "MEDIUM",
       "actions": [
         {
@@ -141,8 +141,8 @@
     "rule_high": {
       "name": "High Threat — Alert + Notify + Monitor",
       "enabled": true,
-      "min_score": 0.60,
-      "max_score": 0.80,
+      "min_score": 0.6,
+      "max_score": 0.8,
       "threat_level": "HIGH",
       "actions": [
         {
@@ -195,7 +195,7 @@
     "rule_critical": {
       "name": "Critical Threat — Kill + Block + Alert",
       "enabled": true,
-      "min_score": 0.80,
+      "min_score": 0.8,
       "max_score": 1.01,
       "threat_level": "CRITICAL",
       "actions": [
@@ -280,9 +280,17 @@
       "trigger_conditions": {
         "mode": "AND",
         "conditions": [
-          { "field": "file_write_rate_per_sec", "operator": ">=", "value": 5.0 },
+          {
+            "field": "file_write_rate_per_sec",
+            "operator": ">=",
+            "value": 5.0
+          },
           { "field": "max_file_entropy_30s", "operator": ">=", "value": 7.5 },
-          { "field": "extension_changed_count_300s", "operator": ">=", "value": 10 }
+          {
+            "field": "extension_changed_count_300s",
+            "operator": ">=",
+            "value": 10
+          }
         ]
       },
       "override_min_score": 0.0,
@@ -290,7 +298,10 @@
         { "type": "alert", "params": { "notification_type": "popup" } },
         { "type": "kill_process", "params": { "terminate_children": true } },
         { "type": "block_network", "params": { "block_scope": "process" } },
-        { "type": "forensic_snapshot", "params": { "capture_process_memory": true } }
+        {
+          "type": "forensic_snapshot",
+          "params": { "capture_process_memory": true }
+        }
       ],
       "mitre_techniques": ["T1486", "T1490"]
     },
@@ -308,8 +319,14 @@
       },
       "override_min_score": 0.0,
       "actions": [
-        { "type": "alert", "params": { "notification_type": "popup", "threat_level": "CRITICAL" } },
-        { "type": "forensic_snapshot", "params": { "capture_process_memory": true } },
+        {
+          "type": "alert",
+          "params": { "notification_type": "popup", "threat_level": "CRITICAL" }
+        },
+        {
+          "type": "forensic_snapshot",
+          "params": { "capture_process_memory": true }
+        },
         { "type": "send_telemetry", "params": { "priority": "critical" } }
       ],
       "_comment": "Không kill process ngay — có thể FP với Windows Defender, AV, memory analysis tools",
@@ -327,13 +344,17 @@
             "mode": "AND",
             "conditions": [
               { "field": "beacon_score", "operator": ">=", "value": 0.85 },
-              { "field": "connected_to_known_bad", "operator": "==", "value": 1 }
+              {
+                "field": "connected_to_known_bad",
+                "operator": "==",
+                "value": 1
+              }
             ]
           },
           {
             "mode": "AND",
             "conditions": [
-              { "field": "beacon_score", "operator": ">=", "value": 0.90 },
+              { "field": "beacon_score", "operator": ">=", "value": 0.9 },
               { "field": "connected_to_tor", "operator": "==", "value": 1 }
             ]
           }
@@ -341,7 +362,10 @@
       },
       "override_min_score": 0.0,
       "actions": [
-        { "type": "alert", "params": { "notification_type": "toast", "threat_level": "HIGH" } },
+        {
+          "type": "alert",
+          "params": { "notification_type": "toast", "threat_level": "HIGH" }
+        },
         {
           "type": "block_network",
           "params": {
@@ -363,12 +387,25 @@
         "mode": "AND",
         "conditions": [
           { "field": "parent_is_office", "operator": "==", "value": 1 },
-          { "field": "process_name", "operator": "in", "value": ["powershell.exe", "cmd.exe", "wscript.exe", "cscript.exe", "mshta.exe"] }
+          {
+            "field": "process_name",
+            "operator": "in",
+            "value": [
+              "powershell.exe",
+              "cmd.exe",
+              "wscript.exe",
+              "cscript.exe",
+              "mshta.exe"
+            ]
+          }
         ]
       },
       "override_min_score": 0.0,
       "actions": [
-        { "type": "alert", "params": { "notification_type": "toast", "threat_level": "HIGH" } },
+        {
+          "type": "alert",
+          "params": { "notification_type": "toast", "threat_level": "HIGH" }
+        },
         { "type": "forensic_snapshot", "params": {} },
         { "type": "monitor_process", "params": { "duration_seconds": 600 } }
       ],
@@ -382,15 +419,25 @@
       "trigger_conditions": {
         "mode": "AND",
         "conditions": [
-          { "field": "process_name", "operator": "in", "value": ["vssadmin.exe", "wmic.exe", "wbadmin.exe"] },
+          {
+            "field": "process_name",
+            "operator": "in",
+            "value": ["vssadmin.exe", "wmic.exe", "wbadmin.exe"]
+          },
           { "field": "cmdline_contains_shadow", "operator": "==", "value": 1 }
         ]
       },
       "override_min_score": 0.0,
       "actions": [
-        { "type": "alert", "params": { "notification_type": "popup", "threat_level": "CRITICAL" } },
+        {
+          "type": "alert",
+          "params": { "notification_type": "popup", "threat_level": "CRITICAL" }
+        },
         { "type": "kill_process", "params": { "terminate_children": false } },
-        { "type": "forensic_snapshot", "params": { "capture_process_memory": false } }
+        {
+          "type": "forensic_snapshot",
+          "params": { "capture_process_memory": false }
+        }
       ],
       "mitre_techniques": ["T1490"]
     }
@@ -462,7 +509,7 @@
 
     "toast": {
       "enabled": true,
-      "title_template": "⚠️ Security Alert — {threat_level}",
+      "title_template": "Security Alert — {threat_level}",
       "body_template": "Suspicious activity detected: {process_name} (Score: {threat_score:.2f})",
       "duration_seconds": 10,
       "action_button": "View Details"
@@ -470,7 +517,7 @@
 
     "popup": {
       "enabled": true,
-      "title_template": "🚨 CRITICAL Security Alert",
+      "title_template": "CRITICAL Security Alert",
       "body_template": "CRITICAL threat detected!\n\nProcess: {process_name}\nScore: {threat_score:.2f}\nAction: {actions_taken}\n\nProcess has been terminated.",
       "modal": true,
       "require_user_ack": false
@@ -555,11 +602,7 @@
     "auto_trigger_score": 1.0,
     "_comment_trigger": "Chỉ auto-isolate khi score = 1.0 (certainty) — không trigger ở mức thấp hơn",
 
-    "allow_exceptions": [
-      "127.0.0.1",
-      "::1",
-      "10.0.0.1"
-    ],
+    "allow_exceptions": ["127.0.0.1", "::1", "10.0.0.1"],
     "_comment_exceptions": "Vẫn cho phép localhost và gateway để admin vẫn có thể kết nối",
 
     "isolation_duration_minutes": 60,
@@ -574,20 +617,20 @@
 
     "score_boost_factors": {
       "_comment": "Các yếu tố làm tăng score khi có context nhất định",
-      "lineage_pattern_match": 0.20,
+      "lineage_pattern_match": 0.2,
       "multiple_indicators": 0.15,
       "_comment_multiple": "Áp dụng khi aggregate_threat_indicator_count >= 3",
-      "out_of_hours_execution": 0.10,
+      "out_of_hours_execution": 0.1,
       "_comment_hours": "Process tạo ra ngoài giờ làm việc (23:00-06:00 weekdays, all weekend)",
-      "new_process_never_seen_before": 0.10,
+      "new_process_never_seen_before": 0.1,
       "running_from_temp_dir": 0.15
     },
 
     "score_reduction_factors": {
       "_comment": "Các yếu tố làm giảm score để giảm False Positive",
-      "signed_by_trusted_vendor": 0.70,
-      "process_in_known_software_dir": 0.80,
-      "low_network_activity_last_30s": 0.90
+      "signed_by_trusted_vendor": 0.7,
+      "process_in_known_software_dir": 0.8,
+      "low_network_activity_last_30s": 0.9
     },
 
     "business_hours": {
