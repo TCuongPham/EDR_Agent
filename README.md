@@ -1,7 +1,7 @@
-# EDR AI Agent
+# EDR AI Agent (Detect Malware Behavior)
 
 > **Endpoint Detection & Response** — AI/ML Engine tích hợp trực tiếp trên Endpoint  
-> **Phiên bản:** v1.0 | **Ngôn ngữ:** C++17 + Python 3.11  
+> **Ngôn ngữ:** C++17 + Python 3.11  
 > **Nền tảng:** Windows 10/11 
 
 ---
