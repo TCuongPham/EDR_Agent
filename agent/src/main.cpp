@@ -21,6 +21,63 @@
 
 std::atomic<bool> g_keepRunning(true);
 
+#if defined(_WIN32)
+#include <windows.h>
+#include <psapi.h>
+#pragma comment(lib, "psapi.lib")
+
+static std::atomic<double> g_edr_cpu_usage(0.0);
+static std::atomic<double> g_edr_ram_usage(0.0);
+
+static ULONGLONG FtToTime(const FILETIME& ft) {
+    return ((ULONGLONG)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+}
+
+static double GetCurrentProcessRAM_MB() {
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        return static_cast<double>(pmc.WorkingSetSize) / (1024.0 * 1024.0);
+    }
+    return 0.0;
+}
+
+static void ResourceMonitorThread() {
+    ULONGLONG last_run_time = 0;
+    ULONGLONG last_process_time = 0;
+    int num_processors = 0;
+
+    SYSTEM_INFO sysInfo;
+    GetSystemInfo(&sysInfo);
+    num_processors = sysInfo.dwNumberOfProcessors;
+
+    while (g_keepRunning) {
+        FILETIME now_ft, creation_ft, exit_ft, kernel_ft, user_ft;
+        GetSystemTimeAsFileTime(&now_ft);
+        ULONGLONG now_time = FtToTime(now_ft);
+
+        if (GetProcessTimes(GetCurrentProcess(), &creation_ft, &exit_ft, &kernel_ft, &user_ft)) {
+            ULONGLONG process_time = FtToTime(kernel_ft) + FtToTime(user_ft);
+            if (last_run_time > 0 && now_time > last_run_time) {
+                ULONGLONG time_diff = now_time - last_run_time;
+                ULONGLONG process_diff = process_time - last_process_time;
+                double percent = (double(process_diff) / double(time_diff)) * 100.0 / num_processors;
+                g_edr_cpu_usage.store(percent);
+            }
+            last_run_time = now_time;
+            last_process_time = process_time;
+        }
+
+        g_edr_ram_usage.store(GetCurrentProcessRAM_MB());
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+}
+#else
+static std::atomic<double> g_edr_cpu_usage(0.0);
+static std::atomic<double> g_edr_ram_usage(0.0);
+static void ResourceMonitorThread() {}
+#endif
+
 // Helper to convert std::any to nlohmann::json
 static nlohmann::json AnyToJson(const std::any &a)
 {
@@ -261,12 +318,16 @@ void EventConsumerThread(std::shared_ptr<RingBuffer> ringBuffer,
         j["final_score"] = scoringCtx.FinalScore();
         std::string jsonStr = j.dump();
 
+        double currentCPU = g_edr_cpu_usage.load();
+        double currentRAM = g_edr_ram_usage.load();
+
         // Print to console (stdout)
         std::cout << "[EVENT] " << jsonStr << std::endl;
         std::cout << "[INFERENCE] PID " << evt->pid << " (" << evt->processName << ") "
                   << "-> ML Score: " << mlScore << " | Final Score: " << scoringCtx.FinalScore()
                   << " (" << ScoreToLevel(scoringCtx.FinalScore()) << ")"
-                  << " | Latency: Feat=" << std::fixed << std::setprecision(3) << featMs << "ms, ML=" << inferMs << "ms" << std::endl;
+                  << " | Latency: Feat=" << std::fixed << std::setprecision(3) << featMs << "ms, ML=" << inferMs << "ms"
+                  << " | EDR Resources: CPU=" << std::fixed << std::setprecision(2) << currentCPU << "%, RAM=" << currentRAM << "MB" << std::endl;
 
         // Log to SQLite Database
         if (db)
@@ -400,6 +461,30 @@ int main(int argc, char *argv[])
     std::cout << "               EDR AI Agent                " << std::endl;
     std::cout << "===========================================" << std::endl;
 
+#if defined(_WIN32)
+    // Kich hoat SeDebugPrivilege ngay khi khoi dong de co quyen terminate
+    // cac tien trinh co token Elevated cao hon (tranh Error 5 / ACCESS_DENIED)
+    {
+        HANDLE hToken = NULL;
+        if (OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
+            LUID luid;
+            if (LookupPrivilegeValueW(NULL, SE_DEBUG_NAME, &luid)) {
+                TOKEN_PRIVILEGES tp;
+                tp.PrivilegeCount           = 1;
+                tp.Privileges[0].Luid       = luid;
+                tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+                AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(tp), NULL, NULL);
+                if (GetLastError() != ERROR_NOT_ALL_ASSIGNED) {
+                    std::cout << "[Startup] SeDebugPrivilege enabled." << std::endl;
+                } else {
+                    std::cerr << "[Startup] Warning: SeDebugPrivilege not available in token. Run as Administrator." << std::endl;
+                }
+            }
+            CloseHandle(hToken);
+        }
+    }
+#endif
+
     bool testMode = false;
     std::string testEventsPath = "";
     std::string configPath = "configs/agent_config.json";
@@ -530,6 +615,9 @@ int main(int argc, char *argv[])
     // Start consumer thread
     std::thread consumerThread(EventConsumerThread, ringBuffer, behaviorGraph, windowAgg, featureRegistry, ruleEngine, onnxInferencer, responseHandler);
 
+    // Start resource monitor thread (updates CPU/RAM usage every 1s in background)
+    std::thread resourceMonitorThread(ResourceMonitorThread);
+
     CollectorRegistry registry;
 
     if (testMode)
@@ -645,10 +733,12 @@ int main(int argc, char *argv[])
             ringBuffer->Push(dummyEvent);
             if (consumerThread.joinable())
                 consumerThread.join();
+            if (resourceMonitorThread.joinable())
+                resourceMonitorThread.join();
             return 1;
         }
 
-        std::cout << "\n[*] Telemetry collection active. Press Enter to shutdown EDR agent..." << std::endl;
+        std::cout << "\n[*] Telemetry collection active..." << std::endl;
         std::cin.get();
 
         std::cout << "[*] Shutdown initiated..." << std::endl;
@@ -664,6 +754,11 @@ int main(int argc, char *argv[])
     if (consumerThread.joinable())
     {
         consumerThread.join();
+    }
+
+    if (resourceMonitorThread.joinable())
+    {
+        resourceMonitorThread.join();
     }
 
     std::cout << "[*] EDR Agent stopped successfully." << std::endl;

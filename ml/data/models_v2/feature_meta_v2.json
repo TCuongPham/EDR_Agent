@@ -38,17 +38,17 @@
     20
   ],
   "dropped_features": [
-    "reg_sam_security_access",
-    "child_spawn_count_5s",
-    "persistence_key_access",
-    "lsass_access",
-    "process_rarity_score",
-    "access_rights_vm_read",
     "parent_is_browser",
-    "child_spawn_count_300s",
-    "parent_is_office"
+    "access_rights_vm_read",
+    "reg_sam_security_access",
+    "parent_is_office",
+    "child_spawn_count_5s",
+    "process_rarity_score",
+    "lsass_access",
+    "persistence_key_access",
+    "child_spawn_count_300s"
   ],
   "lgbm_best_accuracy_val": 0.984006734006734,
-  "lgbm_test_accuracy": 0.9688814129520605,
+  "lgbm_test_accuracy": 0.9671993271656855,
   "rf_test_accuracy": 0.9663582842724979
 }
