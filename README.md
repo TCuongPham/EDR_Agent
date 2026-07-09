@@ -109,12 +109,11 @@ EDR_AI_Agent/
 │   ├── data/
 │   │   └── models_v2/              # Các mô hình (LightGBM & ONNX)
 │   │       ├── best_lgb_model_v2.pkl
-│   │       ├── edr_model_v2.onnx   # Mô hình ONNX FP32 (~369 KB)
-│   │       ├── edr_model_v2_int8.onnx # Mô hình ONNX lượng tử hóa INT8 (~94 KB)
+│   │       ├── edr_model_v2.onnx   # Mô hình ONNX FP32 (~332 KB)
+│   │       ├── edr_model_v2_int8.onnx # Mô hình ONNX lượng tử hóa INT8 (~111 KB)
 │   │       └── feature_meta_v2.json # Metadata thứ tự 16 đặc trưng
 │   └── src/                        # Mã nguồn pipeline ML
 │       ├── train_v2.py             # Huấn luyện & tối ưu hóa siêu tham số (Optuna)
-│       ├── augment_credential.py   # Tăng cường dữ liệu (Data Augmentation)
 │       ├── export_onnx_v2.py       # Xuất mô hình sang chuẩn ONNX
 │       ├── quantize_v2.py          # Lượng tử hóa mô hình sang INT8
 │       └── validate_onnx_v2.py     # Kiểm tra độ chính xác mô hình ONNX
