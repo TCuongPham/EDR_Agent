@@ -38,9 +38,15 @@ void ResponseHandler::Handle(const ScoringContext& ctx) {
                 if (action == "alert") {
                     SendAlert(ctx, score);
                 } else if (action == "kill") {
-                    KillProcess(ctx.event->pid);
+                    if (ctx.event->eventType != "ProcessTerminate") {
+                        KillProcess(ctx.event->pid);
+                    } else {
+                        std::cout << "[ResponseHandler] Skip kill action: Process (PID: " << ctx.event->pid << ") is already in ProcessTerminate event." << std::endl;
+                    }
                 } else if (action == "block") {
-                    BlockNetworkForProcess(ctx.event->pid);
+                    if (ctx.event->eventType != "ProcessTerminate") {
+                        BlockNetworkForProcess(ctx.event->pid);
+                    }
                 }
             }
             break;

@@ -468,7 +468,7 @@ int main(int argc, char *argv[])
         HANDLE hToken = NULL;
         if (OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
             LUID luid;
-            if (LookupPrivilegeValueW(NULL, SE_DEBUG_NAME, &luid)) {
+            if (LookupPrivilegeValueA(NULL, "SeDebugPrivilege", &luid)) {
                 TOKEN_PRIVILEGES tp;
                 tp.PrivilegeCount           = 1;
                 tp.Privileges[0].Luid       = luid;

@@ -13,7 +13,7 @@ static bool EnableSeDebugPrivilege() {
     }
 
     LUID luid;
-    if (!LookupPrivilegeValueW(NULL, SE_DEBUG_NAME, &luid)) {
+    if (!LookupPrivilegeValueA(NULL, "SeDebugPrivilege", &luid)) {
         std::cerr << "[SeDebugPrivilege] LookupPrivilegeValue failed. Error: " << GetLastError() << std::endl;
         CloseHandle(hToken);
         return false;
@@ -35,9 +35,7 @@ static bool EnableSeDebugPrivilege() {
     bool success = (GetLastError() != ERROR_NOT_ALL_ASSIGNED);
     CloseHandle(hToken);
 
-    if (success) {
-        std::cout << "[SeDebugPrivilege] SeDebugPrivilege enabled successfully." << std::endl;
-    } else {
+    if (!success) {
         std::cerr << "[SeDebugPrivilege] Could not enable SeDebugPrivilege (not in token). Run as SYSTEM or higher." << std::endl;
     }
     return success;
